@@ -1,24 +1,26 @@
-FROM node:22.12-alpine AS builder
-
-COPY src/sequentialthinking /app
-COPY tsconfig.json /tsconfig.json
-
+# Build stage
+FROM node:22-alpine AS builder
 WORKDIR /app
 
-RUN --mount=type=cache,target=/root/.npm npm install
+# Copy package files and install all dependencies
+COPY package*.json ./
+COPY tsconfig.json ./
+RUN npm install
 
-RUN --mount=type=cache,target=/root/.npm-production npm ci --ignore-scripts --omit-dev
+# Copy the rest and build
+COPY . .
+RUN npm run build
 
+# Release stage
 FROM node:22-alpine AS release
-
-COPY --from=builder /app/dist /app/dist
-COPY --from=builder /app/package.json /app/package.json
-COPY --from=builder /app/package-lock.json /app/package-lock.json
-
-ENV NODE_ENV=production
-
 WORKDIR /app
 
-RUN npm ci --ignore-scripts --omit-dev
+# Copy dist + package files
+COPY --from=builder /app/dist ./dist
+COPY --from=builder /app/package*.json ./
 
-ENTRYPOINT ["node", "dist/index.js"]
+# Install only production deps
+RUN npm install --omit=dev
+
+# Run the app
+CMD ["node", "dist/index.js"]
