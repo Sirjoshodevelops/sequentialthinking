@@ -2,10 +2,11 @@
 FROM node:22-alpine AS builder
 WORKDIR /app
 
-# Copy everything first (you need .ts files BEFORE npm install)
-COPY . ./
+# Copy all required build inputs BEFORE npm install
+COPY package*.json ./
+COPY tsconfig.json ./
+COPY . .
 
-# Install full deps and run build
 RUN npm install
 
 # === Release stage ===
